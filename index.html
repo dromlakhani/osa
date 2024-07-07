@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSA Screening Questionnaire</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .question {
+            margin-bottom: 20px;
+        }
+        .options label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+        }
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>OSA Screening Questionnaire for Type 2 Diabetes</h1>
+    <div id="questionnaire"></div>
+    <button id="submitBtn" onclick="submitQuestionnaire()" disabled>Submit</button>
+    <button id="resetBtn" onclick="resetQuestionnaire()" style="display: none;">Take the quiz again</button>
+    <div id="result"></div>
+
+    <script>
+        const questions = [
+            {
+                id: 1,
+                text: "Have you ever been diagnosed with sleep apnea or undergone a sleep study?",
+                options: [
+                    { value: "yes", label: "Yes" },
+                    { value: "no", label: "No" }
+                ],
+                scoringType: "binary"
+            },
+            {
+                id: 2,
+                text: "Do you experience excessive and unexpected sleepiness during high cognitive activities (worktime sleepiness)?",
+                options: [
+                    { value: "2", label: "Yes, amidst my professional activities", score: 2 },
+                    { value: "1", label: "Yes, occasionally", score: 1 },
+                    { value: "0", label: "No", score: 0 }
+                ],
+                scoringType: "scored"
+            },
+            {
+                id: 3,
+                text: "Have you been told by your partner or family members that you snore loudly during sleep?",
+                options: [
+                    { value: "2", label: "Yes, frequently", score: 2 },
+                    { value: "1", label: "Yes, occasionally", score: 1 },
+                    { value: "0", label: "No", score: 0 }
+                ],
+                scoringType: "scored"
+            },
+            {
+                id: 4,
+                text: "Do you often wake up abruptly, gasping, or choking during sleep?",
+                options: [
+                    { value: "2", label: "Yes", score: 2 },
+                    { value: "0", label: "No", score: 0 }
+                ],
+                scoringType: "scored"
+            },
+            {
+                id: 5,
+                text: "Have you ever been observed to stop breathing during sleep?",
+                options: [
+                    { value: "2", label: "Yes", score: 2 },
+                    { value: "0", label: "No", score: 0 }
+                ],
+                scoringType: "scored"
+            },
+            {
+                id: 6,
+                text: "Are these symptoms impacting your sleep quality and daytime quality of life?",
+                options: [
+                    { value: "2", label: "Yes", score: 2 },
+                    { value: "0", label: "No", score: 0 }
+                ],
+                scoringType: "scored"
+            }
+        ];
+
+        let answers = {};
+
+        function renderQuestionnaire() {
+            const questionnaireDiv = document.getElementById('questionnaire');
+            questionnaireDiv.innerHTML = questions.map(question => `
+                <div class="question">
+                    <p>${question.text}</p>
+                    <div class="options">
+                        ${question.options.map(option => `
+                            <label>
+                                <input type="radio" name="q${question.id}" value="${option.value}" onchange="handleAnswerChange(${question.id}, '${option.value}')">
+                                ${option.label}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function handleAnswerChange(questionId, value) {
+            answers[questionId] = value;
+            document.getElementById('submitBtn').disabled = Object.keys(answers).length < questions.length;
+        }
+
+        function calculateScore() {
+            if (answers[1] === "yes") return "Previously diagnosed";
+            
+            return questions.slice(1).reduce((total, question) => {
+                const answer = answers[question.id];
+                if (answer) {
+                    const option = question.options.find(opt => opt.value === answer);
+                    return total + (option ? option.score : 0);
+                }
+                return total;
+            }, 0);
+        }
+
+        function getResult(score) {
+            if (score === "Previously diagnosed") return { risk: score, explanation: "You have indicated a previous diagnosis of sleep apnea." };
+            if (score >= 0 && score <= 3) return { risk: "Low risk of OSA", explanation: "Your responses suggest a low risk of Obstructive Sleep Apnea." };
+            if (score >= 4 && score <= 10) return { risk: "Higher risk of OSA", explanation: "Your responses suggest a higher risk of Obstructive Sleep Apnea. It is recommended that you consult your doctor for further evaluation." };
+            return { risk: "Invalid score", explanation: "There was an error calculating your score. Please try again." };
+        }
+
+        function submitQuestionnaire() {
+            const score = calculateScore();
+            const result = getResult(score);
+            let resultHTML = '<h2>Screening Result:</h2>';
+            
+            if (score === "Previously diagnosed") {
+                resultHTML += `<p><strong>${result.risk}</strong></p>`;
+                resultHTML += `<p>${result.explanation}</p>`;
+            } else {
+                resultHTML += `<p><strong>Score:</strong> ${score} out of 10</p>`;
+                resultHTML += `<p><strong>Risk Assessment:</strong> ${result.risk}</p>`;
+                resultHTML += `<p>${result.explanation}</p>`;
+            }
+            
+            document.getElementById('result').innerHTML = resultHTML;
+            document.getElementById('questionnaire').style.display = 'none';
+            document.getElementById('submitBtn').style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'inline-block';
+        }
+
+        function resetQuestionnaire() {
+            answers = {};
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('questionnaire').style.display = 'block';
+            document.getElementById('submitBtn').style.display = 'inline-block';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('resetBtn').style.display = 'none';
+            renderQuestionnaire();
+        }
+
+        renderQuestionnaire();
+    </script>
+</body>
+</html>
